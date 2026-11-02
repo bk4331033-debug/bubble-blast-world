@@ -1,0 +1,59 @@
+name: Build Bubble Blast APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-apk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Extract Game
+        run: |
+          mkdir app
+          unzip bubble-blast-world.zip -d app
+
+      - name: Install Dependencies
+        working-directory: app
+        run: npm install
+
+      - name: Install Capacitor
+        working-directory: app
+        run: npm install @capacitor/core @capacitor/android @capacitor/cli
+
+      - name: Configure Android
+        working-directory: app
+        run: |
+          echo '{"appId":"com.bubbleblastworld.game","appName":"Bubble Blast World","webDir":"dist"}' > capacitor.config.json
+          npx cap add android
+
+      - name: Build Game
+        working-directory: app
+        run: npm run build
+
+      - name: Sync Android
+        working-directory: app
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bubble-Blast-World-APK
+          path: app/android/app/build/outputs/apk/debug/app-debug.apk
